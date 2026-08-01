@@ -8,6 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Arcade Vault — plataforma para jugar online y competir por puntaje (README.md). Currently a fresh `create-next-app` scaffold; no game logic implemented yet.
 
+## Skills
+Always use /frontend-design skill when you have to write html or css code, to ensure good UX/IU.
+
 ## Commands
 
 ```bash
