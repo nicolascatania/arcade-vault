@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { GAMES } from "@/data";
 import { GAME_REGISTRY, type GameEngineHandle, type GameSnapshot } from "@/lib/games/registry";
+
+const CRT_PADDING = 48; // .crt padding: 24px arriba + 24px abajo
+const CRT_BOTTOM_MARGIN = 14; // .crt-bottom margin-top
+const VIEWPORT_SAFETY_MARGIN = 56; // aire extra debajo de todo, antes del borde de la ventana
 
 export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +19,44 @@ export default function GamePlayerPage() {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const handleRef = useRef<GameEngineHandle | null>(null);
   const [paused, setPaused] = useState(false);
+  const crtRef = useRef<HTMLDivElement>(null);
+  const crtBottomRef = useRef<HTMLDivElement>(null);
+  const [crtWidth, setCrtWidth] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!GameComponent) return;
+
+    const recalc = () => {
+      const crt = crtRef.current;
+      const crtBottom = crtBottomRef.current;
+      if (!crt || !crtBottom) return;
+
+      const avPlayer = crt.closest(".av-player");
+      const parentWidth = crt.parentElement?.clientWidth ?? crt.clientWidth;
+      const crtRect = crt.getBoundingClientRect();
+
+      // El body es flex-col con el footer pegado abajo (min-h-full), así que su posición
+      // no sirve como referencia: usamos su alto propio + el padding-bottom del contenedor,
+      // que son constantes independientes del tamaño del crt.
+      const avPlayerPaddingBottom = avPlayer ? parseFloat(getComputedStyle(avPlayer).paddingBottom) || 0 : 0;
+      const footerEl = document.querySelector("footer");
+      const footerHeight = footerEl ? footerEl.getBoundingClientRect().height : 0;
+      const spaceBelowCrt = avPlayerPaddingBottom + footerHeight;
+
+      const availableHeight = window.innerHeight - crtRect.top - spaceBelowCrt - VIEWPORT_SAFETY_MARGIN;
+
+      // crtHeight = (crtWidth - CRT_PADDING) * 0.75 + CRT_PADDING + CRT_BOTTOM_MARGIN + crtBottomHeight
+      // despejando crtWidth para availableHeight:
+      const fixedVertical = CRT_PADDING * 0.25 + CRT_BOTTOM_MARGIN + crtBottom.getBoundingClientRect().height;
+      const widthFromHeight = (availableHeight - fixedVertical) / 0.75;
+
+      setCrtWidth(Math.max(280, Math.min(parentWidth, widthFromHeight)));
+    };
+
+    recalc();
+    window.addEventListener("resize", recalc);
+    return () => window.removeEventListener("resize", recalc);
+  }, [GameComponent]);
 
   const togglePause = () => {
     const handle = handleRef.current;
@@ -67,7 +109,11 @@ export default function GamePlayerPage() {
         </div>
       </div>
 
-      <div className="crt" style={GameComponent ? { maxWidth: "46%", margin: "0 auto" } : undefined}>
+      <div
+        ref={crtRef}
+        className="crt"
+        style={GameComponent ? { width: crtWidth ? `${crtWidth}px` : "100%", margin: "0 auto" } : undefined}
+      >
         <div className="crt-screen">
           {GameComponent ? (
             <GameComponent
@@ -86,7 +132,7 @@ export default function GamePlayerPage() {
             </div>
           )}
         </div>
-        <div className="crt-bottom">
+        <div className="crt-bottom" ref={crtBottomRef}>
           <span className="led">SEÑAL OK</span>
           <span>{game.title} · CRT-83 · 60 HZ</span>
           <span>CARGA · 1MB</span>
