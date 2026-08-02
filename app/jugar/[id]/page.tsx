@@ -17,6 +17,11 @@ const VIEWPORT_SAFETY_MARGIN = 56; // aire extra debajo de todo, antes del borde
 // el ratio alto/ancho (H/W) solo para los juegos cuyo canvas no es 4:3.
 const CRT_SCREEN_RATIO: Record<string, number> = { caida: 600 / 460 };
 const DEFAULT_CRT_SCREEN_RATIO = 0.75;
+// Ancho máximo para juegos "portrait" (screenRatio > 1, más alto que ancho).
+// El ajuste por altura disponible (pensado para 4:3) da un ancho ridículamente
+// chico en pantallas de este tipo, porque la altura disponible entre header/HUD/
+// footer es escasa. Se prioriza el ancho y se permite scroll vertical si hace falta.
+const PORTRAIT_MAX_WIDTH = 480;
 
 export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,8 +58,14 @@ export default function GamePlayerPage() {
       const crtBottom = crtBottomRef.current;
       if (!crt || !crtBottom) return;
 
-      const avPlayer = crt.closest(".av-player");
       const parentWidth = crt.parentElement?.clientWidth ?? crt.clientWidth;
+
+      if (screenRatio > 1) {
+        setCrtWidth(Math.min(parentWidth, PORTRAIT_MAX_WIDTH));
+        return;
+      }
+
+      const avPlayer = crt.closest(".av-player");
       const crtRect = crt.getBoundingClientRect();
 
       // El body es flex-col con el footer pegado abajo (min-h-full), así que su posición
