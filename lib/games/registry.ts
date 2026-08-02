@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { AsteroidsGame } from "@/components/games/AsteroidsGame";
+import { TetrisGame } from "@/components/games/TetrisGame";
 
 export interface GameEngineHandle {
   pause(): void;
@@ -24,4 +25,5 @@ export type GameComponent = ComponentType<GameComponentProps>;
 
 export const GAME_REGISTRY: Record<string, GameComponent> = {
   rocas: AsteroidsGame,
+  caida: TetrisGame,
 };

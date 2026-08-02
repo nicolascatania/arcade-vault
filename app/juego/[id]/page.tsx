@@ -2,13 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { seededScores } from "@/data";
 import { getGame, getTopScores } from "@/lib/supabase/games";
+import { GAME_REGISTRY } from "@/lib/games/registry";
 
 export default async function GameDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const game = await getGame(id);
   if (!game) notFound();
 
-  const scores = id === "rocas" ? await getTopScores("rocas", 10) : seededScores(id.length * 17 + 3, 10);
+  const scores = id in GAME_REGISTRY ? await getTopScores(id, 10) : seededScores(id.length * 17 + 3, 10);
 
   return (
     <div className="av-detail fade-in">
