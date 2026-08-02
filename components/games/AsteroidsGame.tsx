@@ -19,8 +19,15 @@ export function AsteroidsGame({ onSnapshot, onReady }: GameComponentProps) {
     let rafId = 0;
     let lastTime: number | null = null;
 
-    const handleKeydown = (e: KeyboardEvent) => engine.handleKeydown(e.code);
-    const handleKeyup = (e: KeyboardEvent) => engine.handleKeyup(e.code);
+    const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"]);
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (GAME_KEYS.has(e.code)) e.preventDefault();
+      engine.handleKeydown(e.code);
+    };
+    const handleKeyup = (e: KeyboardEvent) => {
+      if (GAME_KEYS.has(e.code)) e.preventDefault();
+      engine.handleKeyup(e.code);
+    };
     window.addEventListener("keydown", handleKeydown);
     window.addEventListener("keyup", handleKeyup);
 
