@@ -38,6 +38,10 @@ export default function GamePlayerPage() {
     if (!snapshot) return;
     if (snapshot.status === "gameover" && snapshot.score > 0 && !modalShownRef.current) {
       modalShownRef.current = true;
+      // Frena el motor mientras el modal pide el alias — si no, un Space/tecla de
+      // reinicio que llegue de rebote reinicia la partida atrás del modal (que sigue
+      // mostrando el puntaje viejo) y el HUD de arriba empieza a moverse solo.
+      handleRef.current?.pause();
       setShowScoreModal(true);
     }
     if (snapshot.status === "playing") {
@@ -167,7 +171,14 @@ export default function GamePlayerPage() {
       </div>
 
       {showScoreModal && snapshot && (
-        <ScoreModal gameId={game.id} score={snapshot.score} onClose={() => setShowScoreModal(false)} />
+        <ScoreModal
+          gameId={game.id}
+          score={snapshot.score}
+          onClose={() => {
+            setShowScoreModal(false);
+            handleRef.current?.resume();
+          }}
+        />
       )}
     </div>
   );

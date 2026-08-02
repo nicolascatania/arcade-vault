@@ -32,7 +32,15 @@ export default function ScoreModal({
   };
 
   return (
-    <div className="modal-bd">
+    <div
+      className="modal-bd"
+      // El motor del juego escucha keydown/keyup en window para controlar la partida.
+      // Frenar la propagación acá evita que flechas/espacio/etc se cuelen al juego (que
+      // ya está en pausa, pero sin esto igual bloquean el input con preventDefault) o
+      // reinicien la partida atrás del modal.
+      onKeyDown={(e) => e.stopPropagation()}
+      onKeyUp={(e) => e.stopPropagation()}
+    >
       <div className="modal">
         <h2>GAME OVER</h2>
         <div className="final-label">PUNTAJE FINAL</div>
@@ -46,6 +54,9 @@ export default function ScoreModal({
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSave();
+                }}
                 placeholder="TU ALIAS (3-12 caracteres)"
                 maxLength={12}
                 autoFocus
