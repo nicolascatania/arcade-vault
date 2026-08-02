@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GAMES } from "@/data";
 import { GAME_REGISTRY, type GameEngineHandle, type GameSnapshot } from "@/lib/games/registry";
+import ScoreModal from "@/components/ScoreModal";
 
 const CRT_PADDING = 48; // .crt padding: 24px arriba + 24px abajo
 const CRT_BOTTOM_MARGIN = 14; // .crt-bottom margin-top
@@ -22,6 +23,19 @@ export default function GamePlayerPage() {
   const crtRef = useRef<HTMLDivElement>(null);
   const crtBottomRef = useRef<HTMLDivElement>(null);
   const [crtWidth, setCrtWidth] = useState<number | null>(null);
+  const [showScoreModal, setShowScoreModal] = useState(false);
+  const modalShownRef = useRef(false);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    if (snapshot.status === "gameover" && snapshot.score > 0 && !modalShownRef.current) {
+      modalShownRef.current = true;
+      setShowScoreModal(true);
+    }
+    if (snapshot.status === "playing") {
+      modalShownRef.current = false;
+    }
+  }, [snapshot]);
 
   useLayoutEffect(() => {
     if (!GameComponent) return;
@@ -138,6 +152,10 @@ export default function GamePlayerPage() {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+
+      {showScoreModal && snapshot && (
+        <ScoreModal gameId={game.id} score={snapshot.score} onClose={() => setShowScoreModal(false)} />
+      )}
     </div>
   );
 }
