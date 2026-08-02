@@ -1,6 +1,7 @@
 import HomePage from "@/components/HomePage";
-import { GAMES } from "@/data";
+import { getGames } from "@/lib/supabase/games";
 
-export default function Home() {
-  return <HomePage games={GAMES.slice(0, 6)} />;
+export default async function Home() {
+  const games = await getGames();
+  return <HomePage games={games.slice(0, 6)} />;
 }
