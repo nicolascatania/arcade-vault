@@ -10,28 +10,19 @@ import ScoreModal from "@/components/ScoreModal";
 const CRT_PADDING = 48; // .crt padding: 24px arriba + 24px abajo
 const CRT_BOTTOM_MARGIN = 14; // .crt-bottom margin-top
 const VIEWPORT_SAFETY_MARGIN = 56; // aire extra debajo de todo, antes del borde de la ventana
-
-// .crt-screen es 4:3 (0.75 alto/ancho) por CSS, pensado para el canvas 800x600 de rocas.
-// El canvas de caida es 460x600 (mucho más alto que ancho) — si se fuerza a 4:3
-// el overflow:hidden de .crt-screen recorta el fondo del tablero. Se overridea
-// el ratio ALTO/ANCHO (H/W) solo para los juegos cuyo canvas no es 4:3.
-// OJO: este valor es H/W (así lo usa la fórmula de abajo). El CSS `aspect-ratio`
-// espera ANCHO/ALTO (W/H) — al aplicarlo como inline style hay que invertirlo
-// (1 / screenRatio), si no el screen queda apaisado en vez de vertical.
-const CRT_SCREEN_RATIO: Record<string, number> = { caida: 600 / 460 };
-const DEFAULT_CRT_SCREEN_RATIO = 0.75;
-// Ancho máximo para juegos "portrait" (screenRatio > 1, más alto que ancho).
-// El ajuste por altura disponible (pensado para 4:3) da un ancho ridículamente
-// chico en pantallas de este tipo, porque la altura disponible entre header/HUD/
-// footer es escasa. Se prioriza el ancho y se permite scroll vertical si hace falta.
-const PORTRAIT_MAX_WIDTH = 480;
+// Si ajustar por altura disponible da un ancho más chico que esto, el canvas queda
+// injugable (pasa con juegos "portrait" cuando el viewport es bajo). En ese caso se
+// prioriza el ancho disponible y se deja que la página scrollee verticalmente en vez
+// de achicar el juego.
+const MIN_PLAYABLE_WIDTH = 360;
 
 export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const game = GAMES.find((g) => g.id === id);
   if (!game) notFound();
 
-  const GameComponent = GAME_REGISTRY[id];
+  const entry = GAME_REGISTRY[id];
+  const GameComponent = entry?.component;
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const handleRef = useRef<GameEngineHandle | null>(null);
   const [paused, setPaused] = useState(false);
@@ -40,7 +31,8 @@ export default function GamePlayerPage() {
   const [crtWidth, setCrtWidth] = useState<number | null>(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const modalShownRef = useRef(false);
-  const screenRatio = CRT_SCREEN_RATIO[id] ?? DEFAULT_CRT_SCREEN_RATIO;
+  // alto/ancho real del motor — única fuente de verdad del encuadre, nada de mapas por id.
+  const screenRatio = entry ? entry.height / entry.width : 0.75;
 
   useEffect(() => {
     if (!snapshot) return;
@@ -63,11 +55,6 @@ export default function GamePlayerPage() {
 
       const parentWidth = crt.parentElement?.clientWidth ?? crt.clientWidth;
 
-      if (screenRatio > 1) {
-        setCrtWidth(Math.min(parentWidth, PORTRAIT_MAX_WIDTH));
-        return;
-      }
-
       const avPlayer = crt.closest(".av-player");
       const crtRect = crt.getBoundingClientRect();
 
@@ -85,8 +72,12 @@ export default function GamePlayerPage() {
       // despejando crtWidth para availableHeight:
       const fixedVertical = CRT_PADDING * 0.25 + CRT_BOTTOM_MARGIN + crtBottom.getBoundingClientRect().height;
       const widthFromHeight = (availableHeight - fixedVertical) / screenRatio;
+      const fittedWidth = Math.min(parentWidth, widthFromHeight);
 
-      setCrtWidth(Math.max(280, Math.min(parentWidth, widthFromHeight)));
+      // El ajuste por altura da un ancho injugable (típico en juegos "portrait" con
+      // poco alto de viewport disponible) — se prioriza el ancho y se deja scrollear.
+      const width = fittedWidth < MIN_PLAYABLE_WIDTH ? parentWidth : fittedWidth;
+      setCrtWidth(Math.max(280, Math.min(parentWidth, width)));
     };
 
     recalc();
