@@ -67,7 +67,7 @@ export default function GamePlayerPage() {
         </div>
       </div>
 
-      <div className="crt" style={GameComponent ? { maxWidth: "90%", margin: "0 auto" } : undefined}>
+      <div className="crt" style={GameComponent ? { maxWidth: "46%", margin: "0 auto" } : undefined}>
         <div className="crt-screen">
           {GameComponent ? (
             <GameComponent
