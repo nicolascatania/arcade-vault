@@ -8,9 +8,10 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const isActive = (name: "biblioteca" | "salon" | "auth") => {
+  const isActive = (name: "inicio" | "biblioteca" | "salon" | "auth") => {
+    if (name === "inicio") return pathname === "/home";
     if (name === "biblioteca") {
-      return pathname === "/" || pathname.startsWith("/juego") || pathname.startsWith("/jugar");
+      return pathname.startsWith("/games") || pathname.startsWith("/juego") || pathname.startsWith("/jugar");
     }
     if (name === "salon") return pathname.startsWith("/salon");
     return pathname.startsWith("/auth");
@@ -21,12 +22,13 @@ export default function Nav() {
   return (
     <>
       <nav className="av-nav">
-        <Link className="logo" href="/" onClick={close}>
+        <Link className="logo" href="/home" onClick={close}>
           <div className="logo-mark"></div>
           <div className="logo-text neon-cyan">ARCADE <span className="neon-magenta">VAULT</span></div>
         </Link>
         <div className="links">
-          <Link className={isActive("biblioteca") ? "active" : ""} href="/">Biblioteca</Link>
+          <Link className={isActive("inicio") ? "active" : ""} href="/home">Inicio</Link>
+          <Link className={isActive("biblioteca") ? "active" : ""} href="/games">Biblioteca</Link>
           <Link className={isActive("salon") ? "active" : ""} href="/salon">Salón de la Fama</Link>
         </div>
         <div className="spacer"></div>
@@ -41,7 +43,8 @@ export default function Nav() {
       <div className={"av-mobile-backdrop" + (open ? " open" : "")} onClick={close}></div>
       <aside className={"av-mobile-panel" + (open ? " open" : "")}>
         <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>MENÚ</div>
-        <Link className={isActive("biblioteca") ? "active" : ""} href="/" onClick={close}>Biblioteca</Link>
+        <Link className={isActive("inicio") ? "active" : ""} href="/home" onClick={close}>Inicio</Link>
+        <Link className={isActive("biblioteca") ? "active" : ""} href="/games" onClick={close}>Biblioteca</Link>
         <Link className={isActive("salon") ? "active" : ""} href="/salon" onClick={close}>Salón de la Fama</Link>
         <Link className={isActive("auth") ? "active" : ""} href="/auth" onClick={close}>Iniciar Sesión</Link>
         <div style={{ flex: 1 }}></div>
