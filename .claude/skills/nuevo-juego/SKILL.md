@@ -65,18 +65,19 @@ Copiar el patrón exacto de `components/games/AsteroidsGame.tsx`:
 
 ## 4. Registrar en `lib/games/registry.ts`
 
-Agregar el import y la entrada en `GAME_REGISTRY`:
+`GAME_REGISTRY` guarda el componente **y** la resolución interna real (`width`/`height`, importadas del `engine.ts` del juego) en cada entrada — es la única fuente de verdad que usa `/jugar/[id]/page.tsx` para calcular el aspect-ratio del CRT. Nunca hardcodees un ratio a mano en la página del reproductor: eso fue justo lo que rompió el encuadre de `serpentina` (un mapa por id que nadie actualizó al agregar el juego nuevo, así que cayó a un ratio 4:3 por default y el `overflow:hidden` le recortó el borde inferior).
 
 ```ts
 import { <Nombre>Game } from "@/components/games/<Nombre>Game";
+import { W as ID_W, H as ID_H } from "@/lib/games/<id>/engine";
 // ...
-export const GAME_REGISTRY: Record<string, GameComponent> = {
-  rocas: AsteroidsGame,
-  <id>: <Nombre>Game,
+export const GAME_REGISTRY: Record<string, GameRegistryEntry> = {
+  rocas: { component: AsteroidsGame, width: ROCAS_W, height: ROCAS_H },
+  <id>: { component: <Nombre>Game, width: ID_W, height: ID_H },
 };
 ```
 
-No tocar `app/jugar/[id]/page.tsx` para esto — ya lee de `GAME_REGISTRY[id]` genéricamente (spec 05 lo dejó así a propósito).
+No tocar `app/jugar/[id]/page.tsx` para esto — ya lee `GAME_REGISTRY[id].component` y deriva el ratio de `.width`/`.height` genéricamente, sea el canvas ancho, alto o cuadrado.
 
 ## 5. Generalizar el leaderboard (hoy hardcodeado a "rocas")
 
@@ -90,7 +91,7 @@ El modal de fin de partida (`components/ScoreModal.tsx`, disparado desde `app/ju
 ## 6. Verificación
 
 1. `npm run lint` — sin errores de tipos/estilo.
-2. `npm run dev` → `/juego/<id>` → "JUGAR AHORA" → `/jugar/<id>`: controles responden igual que el original, HUD canvas y HUD HTML (`hud-stat`) muestran los mismos valores en todo momento.
+2. `npm run dev` → `/juego/<id>` → "JUGAR AHORA" → `/jugar/<id>`: controles responden igual que el original, HUD canvas y HUD HTML (`hud-stat`) muestran los mismos valores en todo momento. Verificá con captura que se ve el canvas COMPLETO dentro del `.crt-screen` (nada recortado arriba/abajo/costados) — si falta un borde, la resolución no está bien registrada en el paso 4, no toques el layout de `/jugar/[id]/page.tsx`.
 3. Perder/game over dispara el overlay; reiniciar (tecla del original) vuelve a jugar.
 4. Botones `PAUSA`/`FIN`/`SALIR` del HUD HTML funcionan; reentrar varias veces a `/jugar/<id>` no deja loops ni listeners duplicados (sin errores en consola).
 5. Jugar hasta game over con score > 0 dispara `ScoreModal`; guardar alias inserta fila en `scores` (verificable con `mcp__supabase__execute_sql`); cancelar no inserta nada; score = 0 no dispara el modal.
