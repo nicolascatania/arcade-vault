@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { seededScores, type Game, type ScoreRow } from "@/data";
 import { createClient } from "@/lib/supabase/client";
+import { GAME_REGISTRY } from "@/lib/games/registry";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -15,10 +16,10 @@ function formatDate(iso: string): string {
 export default function SalonTabs({ games }: { games: Game[] }) {
   const [tab, setTab] = useState(games[0].id);
   const mockRows = useMemo(() => seededScores(tab.length * 23 + 7, 12), [tab]);
-  const [rocasRows, setRocasRows] = useState<ScoreRow[] | null>(null);
+  const [realRowsByTab, setRealRowsByTab] = useState<Record<string, ScoreRow[]>>({});
 
   useEffect(() => {
-    if (tab !== "rocas") return;
+    if (!(tab in GAME_REGISTRY)) return;
     let cancelled = false;
     (async () => {
       try {
@@ -26,23 +27,24 @@ export default function SalonTabs({ games }: { games: Game[] }) {
         const { data, error } = await supabase
           .from("scores")
           .select("name, score, created_at")
-          .eq("game_id", "rocas")
+          .eq("game_id", tab)
           .order("score", { ascending: false })
           .limit(12);
         if (error || !data) throw error ?? new Error("no data");
         if (!cancelled) {
-          setRocasRows(
-            data.map((row, i) => ({
+          setRealRowsByTab((prev) => ({
+            ...prev,
+            [tab]: data.map((row, i) => ({
               rank: i + 1,
               name: row.name,
               score: row.score,
               date: formatDate(row.created_at),
-            }))
-          );
+            })),
+          }));
         }
       } catch (err) {
-        console.error("SalonTabs rocas fetch fallback to seededScores:", err);
-        if (!cancelled) setRocasRows(seededScores("rocas".length * 23 + 7, 12));
+        console.error("SalonTabs real fetch fallback to seededScores:", err);
+        if (!cancelled) setRealRowsByTab((prev) => ({ ...prev, [tab]: seededScores(tab.length * 23 + 7, 12) }));
       }
     })();
     return () => {
@@ -50,9 +52,9 @@ export default function SalonTabs({ games }: { games: Game[] }) {
     };
   }, [tab]);
 
-  const rows = tab === "rocas" ? rocasRows ?? [] : mockRows;
+  const rows = tab in GAME_REGISTRY ? realRowsByTab[tab] ?? [] : mockRows;
 
-  if (tab === "rocas" && rocasRows === null) {
+  if (tab in GAME_REGISTRY && !(tab in realRowsByTab)) {
     return (
       <div className="av-hall fade-in">
         <div className="hall-head">

@@ -11,6 +11,21 @@ const CRT_PADDING = 48; // .crt padding: 24px arriba + 24px abajo
 const CRT_BOTTOM_MARGIN = 14; // .crt-bottom margin-top
 const VIEWPORT_SAFETY_MARGIN = 56; // aire extra debajo de todo, antes del borde de la ventana
 
+// .crt-screen es 4:3 (0.75 alto/ancho) por CSS, pensado para el canvas 800x600 de rocas.
+// El canvas de caida es 460x600 (mucho más alto que ancho) — si se fuerza a 4:3
+// el overflow:hidden de .crt-screen recorta el fondo del tablero. Se overridea
+// el ratio ALTO/ANCHO (H/W) solo para los juegos cuyo canvas no es 4:3.
+// OJO: este valor es H/W (así lo usa la fórmula de abajo). El CSS `aspect-ratio`
+// espera ANCHO/ALTO (W/H) — al aplicarlo como inline style hay que invertirlo
+// (1 / screenRatio), si no el screen queda apaisado en vez de vertical.
+const CRT_SCREEN_RATIO: Record<string, number> = { caida: 600 / 460 };
+const DEFAULT_CRT_SCREEN_RATIO = 0.75;
+// Ancho máximo para juegos "portrait" (screenRatio > 1, más alto que ancho).
+// El ajuste por altura disponible (pensado para 4:3) da un ancho ridículamente
+// chico en pantallas de este tipo, porque la altura disponible entre header/HUD/
+// footer es escasa. Se prioriza el ancho y se permite scroll vertical si hace falta.
+const PORTRAIT_MAX_WIDTH = 480;
+
 export default function GamePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const game = GAMES.find((g) => g.id === id);
@@ -25,6 +40,7 @@ export default function GamePlayerPage() {
   const [crtWidth, setCrtWidth] = useState<number | null>(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const modalShownRef = useRef(false);
+  const screenRatio = CRT_SCREEN_RATIO[id] ?? DEFAULT_CRT_SCREEN_RATIO;
 
   useEffect(() => {
     if (!snapshot) return;
@@ -45,8 +61,14 @@ export default function GamePlayerPage() {
       const crtBottom = crtBottomRef.current;
       if (!crt || !crtBottom) return;
 
-      const avPlayer = crt.closest(".av-player");
       const parentWidth = crt.parentElement?.clientWidth ?? crt.clientWidth;
+
+      if (screenRatio > 1) {
+        setCrtWidth(Math.min(parentWidth, PORTRAIT_MAX_WIDTH));
+        return;
+      }
+
+      const avPlayer = crt.closest(".av-player");
       const crtRect = crt.getBoundingClientRect();
 
       // El body es flex-col con el footer pegado abajo (min-h-full), así que su posición
@@ -59,10 +81,10 @@ export default function GamePlayerPage() {
 
       const availableHeight = window.innerHeight - crtRect.top - spaceBelowCrt - VIEWPORT_SAFETY_MARGIN;
 
-      // crtHeight = (crtWidth - CRT_PADDING) * 0.75 + CRT_PADDING + CRT_BOTTOM_MARGIN + crtBottomHeight
+      // crtHeight = (crtWidth - CRT_PADDING) * screenRatio + CRT_PADDING + CRT_BOTTOM_MARGIN + crtBottomHeight
       // despejando crtWidth para availableHeight:
       const fixedVertical = CRT_PADDING * 0.25 + CRT_BOTTOM_MARGIN + crtBottom.getBoundingClientRect().height;
-      const widthFromHeight = (availableHeight - fixedVertical) / 0.75;
+      const widthFromHeight = (availableHeight - fixedVertical) / screenRatio;
 
       setCrtWidth(Math.max(280, Math.min(parentWidth, widthFromHeight)));
     };
@@ -70,7 +92,7 @@ export default function GamePlayerPage() {
     recalc();
     window.addEventListener("resize", recalc);
     return () => window.removeEventListener("resize", recalc);
-  }, [GameComponent]);
+  }, [GameComponent, screenRatio]);
 
   const togglePause = () => {
     const handle = handleRef.current;
@@ -128,7 +150,7 @@ export default function GamePlayerPage() {
         className="crt"
         style={GameComponent ? { width: crtWidth ? `${crtWidth}px` : "100%", margin: "0 auto" } : undefined}
       >
-        <div className="crt-screen">
+        <div className="crt-screen" style={GameComponent ? { aspectRatio: 1 / screenRatio } : undefined}>
           {GameComponent ? (
             <GameComponent
               onSnapshot={setSnapshot}
