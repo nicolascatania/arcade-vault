@@ -11,10 +11,13 @@ const CRT_PADDING = 48; // .crt padding: 24px arriba + 24px abajo
 const CRT_BOTTOM_MARGIN = 14; // .crt-bottom margin-top
 const VIEWPORT_SAFETY_MARGIN = 56; // aire extra debajo de todo, antes del borde de la ventana
 
-// .crt-screen es 4:3 (0.75) por CSS, pensado para el canvas 800x600 de rocas.
+// .crt-screen es 4:3 (0.75 alto/ancho) por CSS, pensado para el canvas 800x600 de rocas.
 // El canvas de caida es 460x600 (mucho más alto que ancho) — si se fuerza a 4:3
 // el overflow:hidden de .crt-screen recorta el fondo del tablero. Se overridea
-// el ratio alto/ancho (H/W) solo para los juegos cuyo canvas no es 4:3.
+// el ratio ALTO/ANCHO (H/W) solo para los juegos cuyo canvas no es 4:3.
+// OJO: este valor es H/W (así lo usa la fórmula de abajo). El CSS `aspect-ratio`
+// espera ANCHO/ALTO (W/H) — al aplicarlo como inline style hay que invertirlo
+// (1 / screenRatio), si no el screen queda apaisado en vez de vertical.
 const CRT_SCREEN_RATIO: Record<string, number> = { caida: 600 / 460 };
 const DEFAULT_CRT_SCREEN_RATIO = 0.75;
 // Ancho máximo para juegos "portrait" (screenRatio > 1, más alto que ancho).
@@ -147,7 +150,7 @@ export default function GamePlayerPage() {
         className="crt"
         style={GameComponent ? { width: crtWidth ? `${crtWidth}px` : "100%", margin: "0 auto" } : undefined}
       >
-        <div className="crt-screen" style={GameComponent ? { aspectRatio: screenRatio } : undefined}>
+        <div className="crt-screen" style={GameComponent ? { aspectRatio: 1 / screenRatio } : undefined}>
           {GameComponent ? (
             <GameComponent
               onSnapshot={setSnapshot}
